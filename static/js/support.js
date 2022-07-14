@@ -25,16 +25,19 @@ function submitContent() {
     let newTitle = $("#input_title").val();
     let newText = $("#input_text").val();
     let newEmail = $("#input_email").val();
+
     let data = {"post_title": newTitle, "post_content": newText, "post_email": newEmail};
     let regEmail = /^[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}$/;
 
     if (regEmail.test(newEmail) !== true) {
         return alert('이메일이 형식에 맞지 않습니다');
     }
+
     let removeSpaceTitle = newTitle.replace(/\s/g,"")
     let removeSpaceText = newTitle.replace(/\s/g,"")
 
     if (removeSpaceTitle.length !== 0 && removeSpaceText.length !== 0) {
+
         $.ajax({
             type: "POST",
             url: `/api/user/supports/`,
@@ -112,14 +115,6 @@ function deleteContent(contentIdx,countedTime){
         alert("권한이 없습니다.")
     }
 }
-function timeCalculate(createdTime){
-    let now = new Date();
-    let createdAt = new Date(createdTime);
-
-    let nowToCreate = now.getTime() - createdAt.getTime();
-    nowToCreate = parseInt(nowToCreate) / 1000;
-    return nowToCreate;
-}
 
 let defaultURLforGetList = '/api/supports'
 function convertList(){
@@ -137,6 +132,7 @@ function convertList(){
     defaultURLforGetList = currentUrl;
     getList()
 }
+
 
 function getList() {
     let getToken = localStorage.getItem('IllllIlIII_hid');

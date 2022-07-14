@@ -6,7 +6,20 @@ $(document).ready(function () {
   detail_listing();
   getComments();
   getCommentCount();
+  addView();
 });
+
+
+// 조회수 증가 함수
+function addView() {
+    let newsId = getNewsId();
+    $.ajax({
+        type: "PUT",
+        url: '/api/news/views/' +newsId,
+        success: function (response) {
+        }
+    });
+}
 
 const detail_listing = () =>{
     let news_id = location.href.split("?")[1].split("=")[1];
@@ -15,43 +28,47 @@ const detail_listing = () =>{
 
     $.ajax({
         type: 'GET',
-        url: '/api/news/detail/'+news_id, // 테스트용 url
+        url: '/api/news/details/'+news_id,
         data: {},
         success: function (response) {
-            let news_obj = response['body']['result'];
+            let newsObj = response['body']['result'];
             $('#news-box').empty();
             // 서버로 부터 받은 뉴스 리스트의 각 뉴스에 접근해 관련 정보를 받는다.
-            let post_id = news_obj['id'];
-            let title = news_obj['title'];
-            let contents = news_obj['summary']
-            let news_url = news_obj['news_url']
-            let image_url = news_obj['image_url'];
-            let write_time = news_obj['write_time']
-            console.log(write_time)
+            let postId = newsObj['id'];
+            let title = newsObj['title'];
+            let contents = newsObj['summary']
+            let newsUrl = newsObj['news_url']
+            let imageUrl = newsObj['image_url'];
+            let writeTime = newsObj['write_time']
+            console.log(writeTime)
             console.log(title)
-//            let view = news_obj['view']
+            let view = newsObj['view']
             // 받아온 정보를 토대로 card-box html을 구성해준다.
             let html_data = `<div class="news_title title"><h4>${title}</h4></div>
                                 <div class="news_time level-left">
-                                    <small>${write_time}</small>
+                                    <small>${writeTime}</small>
                                 </div>
+                                <div class="news_time level-left">
+                                    <small>조회수: ${view}</small>
+                                </div>
+
                                 <div class="news_icon level-right">
                                     <div class="news_url level-item">
-                                        <a href="${news_url}" target="_blank">
+                                        <a href="${newsUrl}" target="_blank">
                                             <span class="icon is-small"><i class="icon_ fa-solid fa-link"></i></span>
                                         </a>
                                     </div>
                                     <div id="bookmark" class="bookmark level-item">
-                                        <div id="${post_id}">
+                                        <div id="${postId}">
                                             <a class="is-sparta" aria-label="bookmark"
-                                               onclick="toggle_bookmark(${post_id})">
+                                               onclick="toggle_bookmark(${postId})">
                                                                             <span class="icon is-small"><i class="icon_ fa fa-solid fa-bookmark-o"
                                                                                                            aria-hidden="true"></i></span>
                                             </a>
                                         </div>
                                     </div>
                                 </div>
-                                <span class="news_photo"><img src="${image_url}" alt="Image"></span>
+                                <span class="news_photo"><img src="${imageUrl}" alt="Image"></span>
                                 <div class="news_summary" style="white-space: pre-line">${contents}</div>`;
             $('#news-box').append(html_data);
 
@@ -85,7 +102,9 @@ function postComment() {
         data: JSON.stringify(data),
         success: function (response) {
             alert('댓글이 성공적으로 작성되었습니다.');
-            window.location.reload();
+            $('#comment').val("");
+            getComments();
+            getCommentCount();
         }
     });
 }
@@ -139,7 +158,8 @@ function getComments() {
                 let content = comment.content;
                 let username = comment.profileResponseDto.username;
                 let nickname = comment.profileResponseDto.nickname;
-                addHTML(commentId, time, content, username, nickname);
+                let profilePicLink = comment.profileResponseDto.profile_pic == "default" ? "/static/profile_pics/profile_placeholder.png" : "https://bulma.io/images/placeholders/128x128.png";
+                addHTML(commentId, time, content, username, nickname, profilePicLink);
             }
         }
     })
@@ -148,6 +168,7 @@ function getComments() {
 // 댓글 개수 가져오는 함수 + 정렬 UI
 function getCommentCount() {
     let newsId = getNewsId();
+    $('#comment_box-head').empty();
     $.ajax({
         type: "GET",
         url: `/api/user/comments/count/${newsId}`,
@@ -158,7 +179,7 @@ function getCommentCount() {
                         <p class="subtitle is-5">
                             <strong>${response}</strong>
                         </p>
-                        <small style="margin-bottom: 1rem">&nbsp;comments</small>\`
+                        <small style="margin-bottom: 1rem">&nbsp;comments</small>
                     </div>
             
                     <div class="dropdown is-right is-hoverable level-right">
@@ -203,17 +224,25 @@ function getSortedComments(direction) {
                 let content = comment.content;
                 let username = comment.profileResponseDto.username;
                 let nickname = comment.profileResponseDto.nickname;
-                addHTML(commentId, time, content, username, nickname);
+                let profilePicLink = comment.profileResponseDto.profile_pic == "default" ? "/static/profile_pics/profile_placeholder.png" : "https://bulma.io/images/placeholders/128x128.png";
+                addHTML(commentId, time, content, username, nickname, profilePicLink);
             }
         }
     })
 }
 
-function addHTML(commentId, time, content, username, nickname) {
+function addHTML(commentId, time, content, username, nickname, profilePicLink) {
 
     let currentLoginUserName = $.ajax({
         async: false,
         url: "/api/user/me",
+        type: "GET",
+        dataType: "text"
+    }).responseText;
+
+    let likesCount = $.ajax({
+        async: false,
+        url: `/api/user/likes/count/${commentId}`,
         type: "GET",
         dataType: "text"
     }).responseText;
@@ -224,7 +253,7 @@ function addHTML(commentId, time, content, username, nickname) {
         tempHtml = `<article class="media comment-show">
                         <figure class="media-left">
                             <p class="image is-64x64">
-                                <img src="https://bulma.io/images/placeholders/128x128.png">
+                                <img src=${profilePicLink}>
                             </p>
                         </figure>
                         <div class="media-content">
@@ -238,7 +267,7 @@ function addHTML(commentId, time, content, username, nickname) {
                             <nav class="level is-mobile">
                                 <div class="level-left">
                                     <a class="level-item">
-                                        <span class="heart icon is-small"><i onclick="updateLike(${commentId})" class="fa fa-heart-o"></i></span><span class="${commentId}-like-number like-count">0</span>
+                                        <span class="heart icon is-small"><i onclick="updateLike(${commentId})" class="fa fa-heart-o"></i></span><span class="${commentId}-like-number like-count">${likesCount}</span>
                                     </a>
                                 </div>
                             </nav>
@@ -256,7 +285,7 @@ function addHTML(commentId, time, content, username, nickname) {
         tempHtml = `<article class="media comment-show">
                         <figure class="media-left">
                             <p class="image is-64x64">
-                                <img src="https://bulma.io/images/placeholders/128x128.png">
+                                <img src=${profilePicLink}>
                             </p>
                         </figure>
                         <div class="media-content">
@@ -270,7 +299,7 @@ function addHTML(commentId, time, content, username, nickname) {
                             <nav class="level is-mobile">
                                 <div class="level-left">
                                     <a class="level-item">
-                                        <span class="heart icon is-small"><i onclick="updateLike(${commentId})" class="fa fa-heart-o"></i></span><span class="${commentId}-like-number like-count">0</span>
+                                        <span class="heart icon is-small"><i onclick="updateLike(${commentId})" class="fa fa-heart-o"></i></span><span class="${commentId}-like-number like-count">${likesCount}</span>
                                     </a>
                                 </div>
                             </nav>
@@ -328,7 +357,6 @@ function deleteComment(commentId) {
 
 // 좋아요 기능
 function updateLike(commentId) {
-
         let data = {}
         $.ajax({
             type: "POST",
